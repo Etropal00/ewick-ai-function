@@ -28,7 +28,11 @@ def ingest(req: IngestReq):
 
 @app.post("/analyze")
 def analyze(inp: PostInput):
-    h = heuristics(inp.model_dump())
+    try:
+        h = heuristics(inp.model_dump())
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Analyse échouée: {e}")
+
     fixes = {
         "title": anti_clickbait_title(inp.title),
         "description": anti_clickbait_desc(inp.description),
@@ -57,20 +61,6 @@ def analyze(inp: PostInput):
         s.add(audit)
         s.commit()
     return out
-
-@app.get("/history")
-def history(limit: int = 20):
-    with get_session() as s:
-        rows = s.exec(select(Audit).order_by(Audit.id.desc()).limit(limit)).all()
-        return [
-            {
-                "id": r.id,
-                "created_at": r.created_at.isoformat(),
-                "platform": r.platform,
-                "input": json.loads(r.input_json),
-                "output": json.loads(r.output_json)
-            } for r in rows
-        ]
 
 @app.get("/ui", response_class=HTMLResponse)
 def ui():
@@ -112,6 +102,11 @@ async function analyze(){
   const links = (document.getElementById('links').value || '').split(',').map(s=>s.trim()).filter(Boolean);
   const payload = { platform: "facebook", title, description, transcript: "", links };
   const res = await fetch('/analyze', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(payload)});
+  if(!res.ok){
+    const err = await res.json().catch(()=>({detail:'Erreur inconnue'}));
+    document.getElementById('result').innerHTML = `<div class="card"><b>Erreur:</b> ${err.detail||res.status}</div>`;
+    return;
+  }
   const data = await res.json();
   document.getElementById('result').innerHTML = `<div class="card"><h3>Résultat</h3><pre>${JSON.stringify(data, null, 2)}</pre></div>`;
 }
