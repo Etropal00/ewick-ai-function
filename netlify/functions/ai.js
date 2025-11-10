@@ -1,13 +1,11 @@
 // netlify/functions/ai.js
 export async function handler(event) {
-  // --- CORS de base ---
   const cors = {
     "Access-Control-Allow-Origin": "*",
     "Access-Control-Allow-Headers": "content-type",
     "Access-Control-Allow-Methods": "POST,OPTIONS",
   };
 
-  // Préflight (navigateur) → ne pas renvoyer 405
   if (event.httpMethod === "OPTIONS") {
     return { statusCode: 204, headers: cors, body: "" };
   }
@@ -23,7 +21,7 @@ export async function handler(event) {
       return {
         statusCode: 400,
         headers: cors,
-        body: JSON.stringify({ error: "Missing 'idea' in request body." })
+        body: JSON.stringify({ error: "Missing 'idea' in request body." }),
       };
     }
 
@@ -32,33 +30,30 @@ export async function handler(event) {
       return {
         statusCode: 500,
         headers: cors,
-        body: JSON.stringify({ error: "GOOGLE_API_KEY not set on Netlify." })
+        body: JSON.stringify({ error: "GOOGLE_API_KEY not set on Netlify." }),
       };
     }
 
-    // ✅ utiliser l’endpoint stable v1 + modèle valide
     const url = `https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash-latest:generateContent?key=${API_KEY}`;
 
+    // ✅ Nouveau corps sans systemInstruction
     const body = {
       contents: [
         {
           role: "user",
           parts: [
             {
-              text:
-                `Transform this idea into a single-line, production-ready prompt in English ` +
-                `(cinematic, camera, lighting, textures, tone). Keep it one sentence: "${idea}"`
-            }
-          ]
-        }
+              text: `Transform this idea into a single-line, production-ready prompt in English (cinematic, camera, lighting, textures, tone). Keep it one sentence: "${idea}"\n\nAdditional context: ${system}`,
+            },
+          ],
+        },
       ],
-      systemInstruction: { parts: [{ text: system || "" }] }
     };
 
     const res = await fetch(url, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(body)
+      body: JSON.stringify(body),
     });
 
     const data = await res.json();
@@ -66,13 +61,13 @@ export async function handler(event) {
     return {
       statusCode: 200,
       headers: { ...cors, "Content-Type": "application/json" },
-      body: JSON.stringify(data)
+      body: JSON.stringify(data),
     };
   } catch (err) {
     return {
       statusCode: 500,
       headers: cors,
-      body: JSON.stringify({ error: "Internal error", detail: String(err) })
+      body: JSON.stringify({ error: "Internal error", detail: String(err) }),
     };
   }
 }
