@@ -21,7 +21,7 @@ export async function handler(event) {
       return {
         statusCode: 400,
         headers: cors,
-        body: JSON.stringify({ error: "Missing 'idea' in request body." }),
+        body: JSON.stringify({ text: "⚠️ Écris une idée avant de lancer la génération." }),
       };
     }
 
@@ -30,11 +30,11 @@ export async function handler(event) {
       return {
         statusCode: 500,
         headers: cors,
-        body: JSON.stringify({ error: "GOOGLE_API_KEY not set on Netlify." }),
+        body: JSON.stringify({ text: "Clé API manquante sur Netlify." }),
       };
     }
 
-    // ✅ modèle stable et accessible publiquement
+    // ✅ modèle stable et fiable
     const url = `https://generativelanguage.googleapis.com/v1/models/gemini-pro:generateContent?key=${API_KEY}`;
 
     const body = {
@@ -43,7 +43,9 @@ export async function handler(event) {
           role: "user",
           parts: [
             {
-              text: `Transform this idea into a single-line, production-ready cinematic prompt (camera, lighting, texture, tone): "${idea}". Context: ${system}`,
+              text: `Create a vivid, cinematic English prompt based on this idea: "${idea}". 
+Include details of camera style, lighting, texture, mood and tone. 
+Write one single sentence.`,
             },
           ],
         },
@@ -58,24 +60,22 @@ export async function handler(event) {
 
     const data = await res.json();
 
-    // ✅ Nettoyage : extraire uniquement le texte
+    // ✅ Nettoyage + réponse par défaut
     const text =
       data?.candidates?.[0]?.content?.parts?.[0]?.text?.trim() ||
-      "No text generated.";
+      "😅 L’IA n’a rien répondu. Essaie avec une idée plus complète (ex. « un robot jouant au hockey sous la neige »).";
 
     return {
       statusCode: 200,
       headers: { ...cors, "Content-Type": "application/json" },
-      body: JSON.stringify({ text }), // 👈 renvoie seulement le texte
+      body: JSON.stringify({ text }),
     };
   } catch (err) {
+    console.error("Erreur Gemini:", err);
     return {
       statusCode: 500,
       headers: cors,
-      body: JSON.stringify({
-        error: "Internal error",
-        detail: String(err),
-      }),
+      body: JSON.stringify({ text: "Oups, erreur interne. Réessaie dans un instant." }),
     };
   }
 }
