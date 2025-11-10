@@ -6,13 +6,11 @@ export async function handler(event) {
     "Access-Control-Allow-Methods": "POST,OPTIONS",
   };
 
-  if (event.httpMethod === "OPTIONS") {
+  if (event.httpMethod === "OPTIONS")
     return { statusCode: 204, headers: cors, body: "" };
-  }
 
-  if (event.httpMethod !== "POST") {
+  if (event.httpMethod !== "POST")
     return { statusCode: 405, headers: cors, body: "Method Not Allowed" };
-  }
 
   try {
     const { idea = "", system = "" } = JSON.parse(event.body || "{}");
@@ -34,7 +32,7 @@ export async function handler(event) {
       };
     }
 
-    // ✅ modèle stable et fiable
+    // ✅ modèle compatible et stable
     const url = `https://generativelanguage.googleapis.com/v1/models/gemini-pro:generateContent?key=${API_KEY}`;
 
     const body = {
@@ -43,12 +41,21 @@ export async function handler(event) {
           role: "user",
           parts: [
             {
-              text: `Create a vivid, cinematic English prompt based on this idea: "${idea}". 
-Include details of camera style, lighting, texture, mood and tone. 
-Write one single sentence.`,
+              text: `You are a creative cinematic prompt writer. 
+Write a vivid, production-quality prompt in English based on this idea: "${idea}". 
+Include camera angle, lighting, texture, emotion and background in one sentence.`,
             },
           ],
         },
+      ],
+      generationConfig: {
+        temperature: 0.8,   // créativité
+        maxOutputTokens: 200,
+      },
+      safetySettings: [
+        { category: "HARM_CATEGORY_SEXUAL", threshold: "BLOCK_NONE" },
+        { category: "HARM_CATEGORY_HATE_SPEECH", threshold: "BLOCK_NONE" },
+        { category: "HARM_CATEGORY_DEROGATORY", threshold: "BLOCK_NONE" },
       ],
     };
 
@@ -60,10 +67,9 @@ Write one single sentence.`,
 
     const data = await res.json();
 
-    // ✅ Nettoyage + réponse par défaut
     const text =
       data?.candidates?.[0]?.content?.parts?.[0]?.text?.trim() ||
-      "😅 L’IA n’a rien répondu. Essaie avec une idée plus complète (ex. « un robot jouant au hockey sous la neige »).";
+      "😅 L’IA n’a rien répondu. Essaie avec une phrase un peu plus détaillée (ex. « un robot jouant au hockey sous la neige au coucher du soleil »).";
 
     return {
       statusCode: 200,
@@ -75,7 +81,4 @@ Write one single sentence.`,
     return {
       statusCode: 500,
       headers: cors,
-      body: JSON.stringify({ text: "Oups, erreur interne. Réessaie dans un instant." }),
-    };
-  }
-}
+      body: JSON.stringify({ text: "Oups, erreur interne. Réessaie tantôt." }),
