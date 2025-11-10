@@ -34,16 +34,16 @@ export async function handler(event) {
       };
     }
 
-    const url = `https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash-latest:generateContent?key=${API_KEY}`;
+    // ✅ modèle stable et accessible publiquement
+    const url = `https://generativelanguage.googleapis.com/v1/models/gemini-pro:generateContent?key=${API_KEY}`;
 
-    // ✅ Nouveau corps sans systemInstruction
     const body = {
       contents: [
         {
           role: "user",
           parts: [
             {
-              text: `Transform this idea into a single-line, production-ready prompt in English (cinematic, camera, lighting, textures, tone). Keep it one sentence: "${idea}"\n\nAdditional context: ${system}`,
+              text: `Transform this idea into a single-line, production-ready cinematic prompt (camera, lighting, texture, tone): "${idea}". Context: ${system}`,
             },
           ],
         },
@@ -58,16 +58,24 @@ export async function handler(event) {
 
     const data = await res.json();
 
+    // ✅ Nettoyage : extraire uniquement le texte
+    const text =
+      data?.candidates?.[0]?.content?.parts?.[0]?.text?.trim() ||
+      "No text generated.";
+
     return {
       statusCode: 200,
       headers: { ...cors, "Content-Type": "application/json" },
-      body: JSON.stringify(data),
+      body: JSON.stringify({ text }), // 👈 renvoie seulement le texte
     };
   } catch (err) {
     return {
       statusCode: 500,
       headers: cors,
-      body: JSON.stringify({ error: "Internal error", detail: String(err) }),
+      body: JSON.stringify({
+        error: "Internal error",
+        detail: String(err),
+      }),
     };
   }
 }
